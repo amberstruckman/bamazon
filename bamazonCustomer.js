@@ -18,45 +18,42 @@ var connection = mysql.createConnection({
 
 // connect to the mysql server and sql database
 connection.connect(function(err) {
-  console.log("2");
-  if (err) throw err;
+   if (err) throw err;
   // run the start function after the connection is made to prompt the user
   start();
 });
 
 // function which prompts the user for what action they should take
 function start() {
-  // console.log("3");
-  // inquirer
-  //   .prompt({
-  //     name: "productID",
-  //     type: "input",
-  //     message: "Enter in the productID of the product you'd like to purchase"
-    // }//,
-    // {
-    //     name: "quanity",
-    //     type: "input",
-    //     message: "How many would you like to purchase?"
-    // }
-
-  
+    
     connection.query("SELECT * FROM products", function(err, results) {
       if (err) throw err;
    
       var choiceArray = [];
       for (var i = 0; i < results.length; i++) {
-        choiceArray.push(results[i].item_name);
+        choiceArray.push({
+          name: "item_id: " + results[i].item_id + " product_name: " + results[i].product_name + " price: " + results[i].price,
+          value: results[i]
+
+        });
+        
       }
 
+    function placeOrder (chosen, amount) {
+      var total = amount * chosen.price;
+      console.log("Your total amount is: $" + parseFloat(total));
+    }
+
+      
 
     inquirer
       .prompt([
         {
           name: "choice",
-          type: "rawlist",
+          type: "list",
          choices: choiceArray,
           
-          message: "Enter in the item_name of the product you'd like to purchase"
+          message: "Enter in the number of the product you'd like to purchase"
         },
         {
           name: "amount",
@@ -65,32 +62,39 @@ function start() {
         }
       ])
       .then(function(answer) {
+        var amount = parseInt(answer.amount);
+       // console.log("in");
+        //console.log(JSON.stringify(answer));
+        var chosenItem = answer.choice;
+        //console.log(JSON.stringify(chosenItem));
         // get the information of the chosen item
-        var chosenItem;
-        for (var i = 0; i < results.length; i++) {
-          if (results[i].item_name === answer.choice) {
-            chosenItem = results[i];
-          }
-        }
-      
+        // var chosenItem;
+        // for (var i = 0; i < results.length; i++) {
+        //   if (results[i].product_name === answer.choice) {
+        //     chosenItem = results[i];
+        //   }
+        // }
+       // console.log(JSON.stringify(chosenItem));
         // determine if enough stock
-        if (chosenItem.amount < parseInt(answer.amount)) {
-          // bid was high enough, so update db, let the user know, and start over
+       // console.log(chosenItem.stock_quantity + " vs " + amount);
+        if (chosenItem.stock_quantity >= amount) {
+          
           connection.query(
             "UPDATE products SET ? WHERE ?",
             [
               {
-                //stock quanity subtracted????
-              stock_quanity: answer.amount
+             
+              stock_quantity: chosenItem.stock_quantity - amount
               },
               {
-                id: chosenItem.item_id
+                item_id: chosenItem.item_id
               }
             ],
             function(error) {
               if (error) throw err;
               console.log("Order Successful!");
-              start();
+              placeOrder(chosenItem, amount);
+              //start();
             }
           );
         }
@@ -101,5 +105,6 @@ function start() {
         }
       });
   });
+ // console.log("end start");
 // }
     }
